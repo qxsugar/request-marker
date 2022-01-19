@@ -3,7 +3,7 @@ package request_mark
 import (
 	"errors"
 	"fmt"
-	"github.com/gomodule/redigo/redis"
+	"github.com/qxsugar/request-mark/redis"
 	"strings"
 )
 
@@ -50,7 +50,7 @@ type Rule struct {
 	Enable      bool     `json:"enable"`      // 是否开启
 	Priority    int      `json:"priority"`    // 优先级
 	Type        RuleType `json:"type"`        // 规则类型
-	MarkValue   string   `json:"markValue"`    // mark值
+	MarkValue   string   `json:"markValue"`   // mark值
 	MaxVersion  string   `json:"maxVersion"`  // 最大版本号
 	MinVersion  string   `json:"minVersion"`  // 最小版本号
 	UserIds     []string `json:"userIds"`     // 用户identify列表
