@@ -233,7 +233,7 @@ func DialContext(ctx context.Context, network, address string, options ...DialOp
 		option.f(&do)
 	}
 	if do.dialContext == nil {
-		do.dialContext = do.dialer.DialContext
+		do.dialContext = (*do.dialer).DialContext
 	}
 
 	netConn, err := do.dialContext(ctx, network, address)
