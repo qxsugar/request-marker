@@ -1,8 +1,6 @@
 package request_mark
 
-import (
-	"github.com/gomodule/redigo/redis"
-)
+import "github.com/qxsugar/request-mark/redis"
 
 func NewRedis(addr string, password string) redis.Conn {
 	logger := NewLogger("INFO")

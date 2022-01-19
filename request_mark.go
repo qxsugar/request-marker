@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/gomodule/redigo/redis"
+	"github.com/qxsugar/request-mark/redis"
 	"math/rand"
 	"net/http"
 	"sort"
