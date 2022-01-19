@@ -6,29 +6,29 @@ summary: mark the request
 testData:
   request-mark:
     serviceName: api
-      logLevel: DEBUG
-      redisAddr: redis-server
-      redisPassword: ""
-      redisEnable: false
-      redisRulesKey: "redis_rules_key"
-      redisRuleMaxLen: 256
-      redisLoadInterval: 15
-      tagKey: TAG
-      headerVersion: X-version
-      headerIdentify: identify
-      cookieIdentify: identify-cookie
-      query_identify: identify-query
-      rules:
-        - serviceName: api
-          name: name
-          enable: true
-          priority: 100
-          type: path
-          tagValue: alpha
-          maxVersion: 3.3.3
-          minVersion: 2.2.2
-          userIds:
-            - A001
-            - A002
-          weight: 80
-          path: alpha
+    logLevel: DEBUG
+    redisAddr: redis-server
+    redisPassword: ""
+    redisEnable: false
+    redisRulesKey: "redis_rules_key"
+    redisRuleMaxLen: 256
+    redisLoadInterval: 15
+    markKey: TAG
+    headerVersion: X-version
+    headerIdentify: identify
+    cookieIdentify: identify-cookie
+    queryIdentify: identify-query
+    rules:
+      - serviceName: api
+        name: name
+        enable: true
+        priority: 100
+        type: path
+        markvalue: alpha
+        maxVersion: 3.3.3
+        minVersion: 2.2.2
+        userIds:
+          - A001
+          - A002
+        weight: 80
+        path: alpha

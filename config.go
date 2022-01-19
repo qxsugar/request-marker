@@ -20,7 +20,7 @@ const (
 	keyEnable      = "enable"
 	keyPriority    = "priority"
 	keyType        = "type"
-	keyTagValue    = "tag_value"
+	keyMarkValue   = "mark_value"
 	keyVersion     = "version"
 	keyUserIds     = "user_ids"
 	keyWeight      = "weight"
@@ -37,11 +37,11 @@ type Config struct {
 	RedisRuleMaxLen   int    `json:"redisRuleMaxLen"`   // redis规则列表的长度
 	RedisLoadInterval int64  `json:"redisLoadInterval"` // redis加载间隔
 	Rules             []Rule `json:"rules"`             // 规则列表
-	MarkKey           string `json:"MarkKey"`           // 标记header的key
+	MarkKey           string `json:"markKey"`           // 标记header的key
 	HeaderVersion     string `json:"headerVersion"`     // 请求头里的version key
 	HeaderIdentify    string `json:"headerIdentify"`    // header里的identify key
 	CookieIdentify    string `json:"cookieIdentify"`    // cookie里的identify key
-	QueryIdentify     string `json:"query_identify"`    // query里的identify key
+	QueryIdentify     string `json:"queryIdentify"`     // query里的identify key
 }
 
 type Rule struct {
@@ -50,7 +50,7 @@ type Rule struct {
 	Enable      bool     `json:"enable"`      // 是否开启
 	Priority    int      `json:"priority"`    // 优先级
 	Type        RuleType `json:"type"`        // 规则类型
-	MarkValue   string   `json:"tagValue"`    // mark值
+	MarkValue   string   `json:"markValue"`    // mark值
 	MaxVersion  string   `json:"maxVersion"`  // 最大版本号
 	MinVersion  string   `json:"minVersion"`  // 最小版本号
 	UserIds     []string `json:"userIds"`     // 用户identify列表
@@ -101,7 +101,7 @@ func parseRule(values []interface{}) (Rule, error) {
 				return r, err
 			}
 			r.Type = RuleType(ruleType)
-		case keyTagValue:
+		case keyMarkValue:
 			markValue, err := redis.String(value, nil)
 			if err != nil {
 				return r, err
