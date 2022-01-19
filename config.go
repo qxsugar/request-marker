@@ -1,4 +1,4 @@
-package traefik_gray_tag
+package request_mark
 
 import (
 	"errors"
@@ -29,19 +29,19 @@ const (
 
 type Config struct {
 	ServiceName       string `json:"serviceName"`       // serviceName
-	LogLevel          string `json:"logLevel"`          // redis 等级
+	LogLevel          string `json:"logLevel"`          // logger 等级
 	RedisAddr         string `json:"redisAddr"`         // redis 地址
 	RedisPassword     string `json:"redisPassword"`     // redis 密码
 	RedisEnable       bool   `json:"redisEnable"`       // 是否启用redis配置
 	RedisRulesKey     string `json:"redisRulesKey"`     // redis规则key
-	RedisRuleMaxLen   int    `json:"redisRuleMaxLen"`   // redis规则列表的最长
+	RedisRuleMaxLen   int    `json:"redisRuleMaxLen"`   // redis规则列表的长度
 	RedisLoadInterval int64  `json:"redisLoadInterval"` // redis加载间隔
 	Rules             []Rule `json:"rules"`             // 规则列表
-	TagKey            string `json:"tagKey"`            // 请求头里的tagKey
-	HeaderVersion     string `json:"headerVersion"`     // 请求头里的version
-	HeaderIdentify    string `json:"headerIdentify"`    // header里的identify
-	CookieIdentify    string `json:"cookieIdentify"`    // cookie里的identify
-	QueryIdentify     string `json:"query_identify"`    // query里的identify
+	MarkKey           string `json:"MarkKey"`           // 标记header的key
+	HeaderVersion     string `json:"headerVersion"`     // 请求头里的version key
+	HeaderIdentify    string `json:"headerIdentify"`    // header里的identify key
+	CookieIdentify    string `json:"cookieIdentify"`    // cookie里的identify key
+	QueryIdentify     string `json:"query_identify"`    // query里的identify key
 }
 
 type Rule struct {
@@ -50,10 +50,10 @@ type Rule struct {
 	Enable      bool     `json:"enable"`      // 是否开启
 	Priority    int      `json:"priority"`    // 优先级
 	Type        RuleType `json:"type"`        // 规则类型
-	TagValue    string   `json:"tagValue"`    // tag值
+	MarkValue   string   `json:"tagValue"`    // mark值
 	MaxVersion  string   `json:"maxVersion"`  // 最大版本号
 	MinVersion  string   `json:"minVersion"`  // 最小版本号
-	UserIds     []string `json:"userIds"`     // 用户id列表
+	UserIds     []string `json:"userIds"`     // 用户identify列表
 	Weight      int      `json:"weight"`      // 权重
 	Path        string   `json:"path"`        // 路径匹配
 }
@@ -62,10 +62,6 @@ type Rule struct {
 // yaegi解释器对很多库支持不好。所以手动解析
 // format ["serviceName", "foo", "enable", 1]
 func parseRule(values []interface{}) (Rule, error) {
-	if len(values)%2 != 0 {
-		return Rule{}, errors.New("expects even number of values result")
-	}
-
 	r := Rule{}
 	for i := 0; i < len(values); i += 2 {
 		key, ok := values[i].([]byte)
@@ -106,11 +102,11 @@ func parseRule(values []interface{}) (Rule, error) {
 			}
 			r.Type = RuleType(ruleType)
 		case keyTagValue:
-			tagValue, err := redis.String(value, nil)
+			markValue, err := redis.String(value, nil)
 			if err != nil {
 				return r, err
 			}
-			r.TagValue = tagValue
+			r.MarkValue = markValue
 		case keyVersion:
 			version, err := redis.String(value, nil)
 			if err != nil {
@@ -128,8 +124,7 @@ func parseRule(values []interface{}) (Rule, error) {
 			if err != nil {
 				return r, err
 			}
-			listArr := strings.Split(list, ",")
-			r.UserIds = listArr
+			r.UserIds = strings.Split(list, ",")
 		case keyWeight:
 			weight, err := redis.Int(value, nil)
 			if err != nil {

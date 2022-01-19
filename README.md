@@ -1,7 +1,5 @@
-traefik 给请求打标签中间件
---------------------------
-
-## 流程
+mark request for traefik plugin
+-------------------------------
 
 ## 配置
 
@@ -10,18 +8,18 @@ traefik 给请求打标签中间件
 ```yaml
 experimental:
   plugins:
-    traefik-gray-tag:
-      moduleName: github.com/qxsugar/traefik-gray-tag
-      version: v1.0.1
+    request-mark:
+      moduleName: github.com/qxsugar/request-mark
+      version: v0.0.1
 ```
 
 配置中间件
 
 ```yaml
   middlewares:
-    gray-tag:
+    request-mark:
       plugin:
-        traefik-gray-tag:
+        request-mark:
           serviceName: api
           logLevel: DEBUG
           redisAddr: redis.com

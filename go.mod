@@ -1,4 +1,4 @@
-module github.com/qxsugar/traefik-gray-tag
+module github.com/qxsugar/request-mark
 
 go 1.17
 
