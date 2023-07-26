@@ -1,19 +1,20 @@
 displayName: request mark
 type: middleware
 import: github.com/qxsugar/request-mark
-summary: mark the request
+summary: mark requests according to the rules
 
 testData:
   request-mark:
-    serviceName: api
     logLevel: DEBUG
+
+    serviceName: api
+    redisEnable: false
     redisAddr: redis-server
     redisPassword: ""
-    redisEnable: false
     redisRulesKey: "redis_rules_key"
     redisRuleMaxLen: 256
     redisLoadInterval: 15
-    markKey: TAG
+    markKey: X-DISPATCH
     headerVersion: X-version
     headerIdentify: identify
     cookieIdentify: identify-cookie
@@ -24,7 +25,7 @@ testData:
         enable: true
         priority: 100
         type: path
-        markvalue: alpha
+        markValue: alpha
         maxVersion: 3.3.3
         minVersion: 2.2.2
         userIds:

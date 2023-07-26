@@ -18,19 +18,19 @@ func CreateConfig() *Config {
 }
 
 type Mark struct {
-	next   http.Handler
-	logger *Logger
-	config *Config
-	redis  redis.Conn
+	next      http.Handler
+	logger    *Logger
+	redisConn redis.Conn
+	config    *Config
 }
 
 func New(ctx context.Context, next http.Handler, config *Config, name string) (http.Handler, error) {
 	logger := NewLogger(config.LogLevel)
 
-	logger.Info("create new plugin, name: ", name)
+	logger.Info(fmt.Sprintf("create new request mark, name: %s", name))
 	configCopy := *config
 	configCopy.RedisPassword = "******"
-	logger.Debug(fmt.Sprintf("config info is %+v", configCopy))
+	logger.Debug(fmt.Sprintf("config info : %+v", configCopy))
 
 	rand.Seed(time.Now().Unix())
 
@@ -45,106 +45,114 @@ func New(ctx context.Context, next http.Handler, config *Config, name string) (h
 		sort.Sort(SortByPriority(config.Rules))
 	}
 
-	mark.startLoadConfig()
+	mark.StartRefreshConfig(ctx)
 	return mark, nil
 }
 
 func (m *Mark) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	if len(m.config.Rules) > 0 {
-		m.logger.Debug(fmt.Sprintf("mark rules is %+v", m.config.Rules))
-		for _, rule := range m.config.Rules {
-			if !rule.Enable {
-				continue
-			}
+	if len(m.config.Rules) <= 0 {
+		m.logger.Info("unmarked request. use default rule")
+		m.next.ServeHTTP(rw, req)
+		return
+	}
 
-			if rule.ServiceName != m.config.ServiceName {
-				continue
-			}
+	m.logger.Debug(fmt.Sprintf("begin match rule, rule is : %v", m.config.Rules))
+	for _, rule := range m.config.Rules {
+		if !rule.Enable {
+			m.logger.Debug(fmt.Sprintf("rule is disabled, will be continue, ruleName: %v", rule.Name))
+			continue
+		}
 
-			switch rule.Type {
-			case ruleTypePath:
-				ok, err := m.matchByPath(rule, req)
-				if ok && err == nil {
-					req.Header.Set(m.config.MarkKey, rule.MarkValue)
-					m.next.ServeHTTP(rw, req)
-					return
-				}
+		if rule.ServiceName != m.config.ServiceName {
+			continue
+		}
 
-			case ruleTypeIdentify:
-				ok, err := m.matchByIdentify(rule, req)
-				if ok && err == nil {
-					req.Header.Set(m.config.MarkKey, rule.MarkValue)
-					m.next.ServeHTTP(rw, req)
-					return
-				}
-			case ruleTypeVersion:
-				ok, err := m.matchByVersion(rule, req)
-				if ok && err == nil {
-					req.Header.Set(m.config.MarkKey, rule.MarkValue)
-					m.next.ServeHTTP(rw, req)
-					return
-				}
-			case ruleTypeWeight:
-				ok, err := m.matchByWeight(rule, req)
-				if ok && err == nil {
-					req.Header.Set(m.config.MarkKey, rule.MarkValue)
-					m.next.ServeHTTP(rw, req)
-					return
-				}
+		var markKey, markValue string
+		switch rule.Type {
+		case ruleTypeURI:
+			ok, err := m.matchByURI(rule, req)
+			if ok && err == nil {
+				markKey, markValue = m.config.MarkKey, rule.MarkValue
 			}
+		case ruleTypeWeight:
+			ok, err := m.matchByWeight(rule, req)
+			if ok && err == nil {
+				markKey, markValue = m.config.MarkKey, rule.MarkValue
+			}
+		case ruleTypeIdentify:
+			ok, err := m.matchByIdentify(rule, req)
+			if ok && err == nil {
+				markKey, markValue = m.config.MarkKey, rule.MarkValue
+			}
+		case ruleTypeVersion:
+			ok, err := m.matchByVersion(rule, req)
+			if ok && err == nil {
+				markKey, markValue = m.config.MarkKey, rule.MarkValue
+			}
+		default:
+		}
+
+		if markKey != "" && markValue != "" {
+			req.Header.Set(markKey, markValue)
+			m.logger.Info(fmt.Sprintf("mark request, mark key: %v, mark value: %v", markKey, markValue))
+			m.next.ServeHTTP(rw, req)
+			break
 		}
 	}
 
-	m.logger.Info("unmarked request.")
+	m.logger.Info("unmarked request. use default rule")
 	m.next.ServeHTTP(rw, req)
 }
 
-func (m *Mark) startLoadConfig() {
+func (m *Mark) StartRefreshConfig(ctx context.Context) {
 	if !m.config.RedisEnable {
 		return
 	}
-	m.redis = NewRedis(m.config.RedisAddr, m.config.RedisPassword)
+	m.redisConn = NewRedisOrDie(m.config.RedisAddr, m.config.RedisPassword)
 
 	go func() {
-		m.logger.Info("load config ticker running...")
+		m.logger.Info("refresh config ticker running...")
 		timeTicker := time.NewTicker(time.Duration(m.config.RedisLoadInterval) * time.Second)
 
 		// 用不了syscall.SIGTERM，就不处理退出事件了
 		for {
 			select {
+			case <-ctx.Done():
+				timeTicker.Stop()
+				return
 			case <-timeTicker.C:
-				m.logger.Debug("reload config")
-				err := m.reloadConfig()
+				m.logger.Debug("refresh config")
+				err := m.RefreshConfig()
 				if err != nil {
-					m.logger.Error("load config failed, error ", err)
+					m.logger.Error(fmt.Sprintf("failed to refresh config, err: %v", err))
 				}
 			}
 		}
 	}()
 }
 
-func (m *Mark) reloadConfig() error {
-	ruleKeys, err := redis.Strings(m.redis.Do("LRANGE", m.config.RedisRulesKey, 0, m.config.RedisRuleMaxLen))
+func (m *Mark) RefreshConfig() error {
+	ruleKeys, err := redis.Strings(m.redisConn.Do("LRANGE", m.config.RedisRulesKey, 0, m.config.RedisRuleMaxLen))
 	if err != nil {
 		return err
 	}
 
 	if len(ruleKeys) <= 0 {
-		return errors.New("RuleKeys is empty")
+		return errors.New("failed to refresh config, rule keys is empty")
 	}
 
 	rules := make([]Rule, 0, len(ruleKeys))
 
 	for _, ruleKey := range ruleKeys {
-		values, err := redis.Values(m.redis.Do("HGETALL", ruleKey))
+		values, err := redis.Values(m.redisConn.Do("HGETALL", ruleKey))
 		if err != nil {
-			m.logger.Error("get rule failed", "key", ruleKey, "error", err)
+			m.logger.Error(fmt.Sprintf("failed to get rule, key: %s, error: %v", ruleKey, err))
 			continue
 		}
 
 		rule, err := parseRule(values)
 		if err != nil {
-			m.logger.Error("parse rule failed", "error", err)
+			m.logger.Error(fmt.Sprintf("failed to parse rule, error, %v", err))
 			continue
 		}
 		rules = append(rules, rule)
@@ -171,7 +179,7 @@ func (m *Mark) matchByIdentify(rule Rule, req *http.Request) (bool, error) {
 	return false, nil
 }
 
-func (m *Mark) matchByPath(rule Rule, req *http.Request) (bool, error) {
+func (m *Mark) matchByURI(rule Rule, req *http.Request) (bool, error) {
 	if strings.Index(req.URL.String(), rule.Path) >= 0 {
 		return true, nil
 	}

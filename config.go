@@ -13,7 +13,7 @@ const (
 	ruleTypeVersion  = RuleType("version")
 	ruleTypeIdentify = RuleType("identify")
 	ruleTypeWeight   = RuleType("weight")
-	ruleTypePath     = RuleType("path")
+	ruleTypeURI      = RuleType("uri")
 
 	keyServiceName = "service_name"
 	keyName        = "name"
@@ -30,8 +30,8 @@ const (
 type Config struct {
 	ServiceName       string `json:"serviceName"`       // serviceName
 	LogLevel          string `json:"logLevel"`          // logger 等级
-	RedisAddr         string `json:"redisAddr"`         // redis 地址
-	RedisPassword     string `json:"redisPassword"`     // redis 密码
+	RedisAddr         string `json:"redisAddr"`         // redis_conn 地址
+	RedisPassword     string `json:"redisPassword"`     // redis_conn 密码
 	RedisEnable       bool   `json:"redisEnable"`       // 是否启用redis配置
 	RedisRulesKey     string `json:"redisRulesKey"`     // redis规则key
 	RedisRuleMaxLen   int    `json:"redisRuleMaxLen"`   // redis规则列表的长度
