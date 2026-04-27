@@ -63,6 +63,7 @@ func TestParseRule_MinimalFields(t *testing.T) {
 		[]byte("priority"), []byte("50"),
 		[]byte("type"), []byte("path"),
 		[]byte("mark_value"), []byte("mark"),
+		[]byte("path"), []byte("/"),
 	}
 
 	rule, err := parseRule(values)
@@ -138,20 +139,210 @@ func TestSortByPriority(t *testing.T) {
 	}
 }
 
-func TestRuleValidate(t *testing.T) {
+func TestRuleValidate_ValidVersionRule(t *testing.T) {
 	rule := Rule{
-		Name:        "test",
-		Enable:      true,
-		Priority:    100,
+		Name:        "version-rule",
+		MarkerValue: "v2",
 		Type:        RuleTypeVersion,
-		MarkerValue: "mark",
 		MinVersion:  "1.0.0",
 		MaxVersion:  "2.0.0",
 	}
 
 	err := rule.Validate()
 	if err != nil {
-		t.Errorf("unexpected error: %v", err)
+		t.Errorf("expected no error for valid version rule, got %v", err)
+	}
+}
+
+func TestRuleValidate_VersionRuleMissingMinVersion(t *testing.T) {
+	rule := Rule{
+		Name:        "version-rule",
+		MarkerValue: "v2",
+		Type:        RuleTypeVersion,
+		MaxVersion:  "2.0.0",
+	}
+
+	err := rule.Validate()
+	if err == nil {
+		t.Errorf("expected error for version rule missing minVersion")
+	}
+}
+
+func TestRuleValidate_VersionRuleMissingMaxVersion(t *testing.T) {
+	rule := Rule{
+		Name:        "version-rule",
+		MarkerValue: "v2",
+		Type:        RuleTypeVersion,
+		MinVersion:  "1.0.0",
+	}
+
+	err := rule.Validate()
+	if err == nil {
+		t.Errorf("expected error for version rule missing maxVersion")
+	}
+}
+
+func TestRuleValidate_ValidIdentifyRule(t *testing.T) {
+	rule := Rule{
+		Name:        "identify-rule",
+		MarkerValue: "beta",
+		Type:        RuleTypeIdentify,
+		UserIds:     []string{"user1", "user2"},
+	}
+
+	err := rule.Validate()
+	if err != nil {
+		t.Errorf("expected no error for valid identify rule, got %v", err)
+	}
+}
+
+func TestRuleValidate_IdentifyRuleNoUserIds(t *testing.T) {
+	rule := Rule{
+		Name:        "identify-rule",
+		MarkerValue: "beta",
+		Type:        RuleTypeIdentify,
+		UserIds:     []string{},
+	}
+
+	err := rule.Validate()
+	if err == nil {
+		t.Errorf("expected error for identify rule with no userIds")
+	}
+}
+
+func TestRuleValidate_ValidCanaryRule(t *testing.T) {
+	rule := Rule{
+		Name:        "canary-rule",
+		MarkerValue: "canary",
+		Type:        RuleTypeCanary,
+		Canary:      50,
+	}
+
+	err := rule.Validate()
+	if err != nil {
+		t.Errorf("expected no error for valid canary rule, got %v", err)
+	}
+}
+
+func TestRuleValidate_CanaryRuleTooHigh(t *testing.T) {
+	rule := Rule{
+		Name:        "canary-rule",
+		MarkerValue: "canary",
+		Type:        RuleTypeCanary,
+		Canary:      101,
+	}
+
+	err := rule.Validate()
+	if err == nil {
+		t.Errorf("expected error for canary rule with value > 100")
+	}
+}
+
+func TestRuleValidate_CanaryRuleNegative(t *testing.T) {
+	rule := Rule{
+		Name:        "canary-rule",
+		MarkerValue: "canary",
+		Type:        RuleTypeCanary,
+		Canary:      -1,
+	}
+
+	err := rule.Validate()
+	if err == nil {
+		t.Errorf("expected error for canary rule with negative value")
+	}
+}
+
+func TestRuleValidate_ValidPathRule(t *testing.T) {
+	rule := Rule{
+		Name:        "path-rule",
+		MarkerValue: "admin",
+		Type:        RuleTypePath,
+		Path:        "/admin",
+	}
+
+	err := rule.Validate()
+	if err != nil {
+		t.Errorf("expected no error for valid path rule, got %v", err)
+	}
+}
+
+func TestRuleValidate_PathRuleNoPath(t *testing.T) {
+	rule := Rule{
+		Name:        "path-rule",
+		MarkerValue: "admin",
+		Type:        RuleTypePath,
+	}
+
+	err := rule.Validate()
+	if err == nil {
+		t.Errorf("expected error for path rule with no path")
+	}
+}
+
+func TestRuleValidate_EmptyName(t *testing.T) {
+	rule := Rule{
+		MarkerValue: "mark",
+		Type:        RuleTypePath,
+		Path:        "/",
+	}
+
+	err := rule.Validate()
+	if err == nil {
+		t.Errorf("expected error for rule with empty name")
+	}
+}
+
+func TestRuleValidate_EmptyMarkerValue(t *testing.T) {
+	rule := Rule{
+		Name: "test-rule",
+		Type: RuleTypePath,
+		Path: "/",
+	}
+
+	err := rule.Validate()
+	if err == nil {
+		t.Errorf("expected error for rule with empty markValue")
+	}
+}
+
+func TestRuleValidate_UnknownType(t *testing.T) {
+	rule := Rule{
+		Name:        "test-rule",
+		MarkerValue: "mark",
+		Type:        RuleType("unknown"),
+	}
+
+	err := rule.Validate()
+	if err == nil {
+		t.Errorf("expected error for unknown rule type")
+	}
+}
+
+func TestRuleValidate_CanaryBoundary_Zero(t *testing.T) {
+	rule := Rule{
+		Name:        "canary-rule",
+		MarkerValue: "canary",
+		Type:        RuleTypeCanary,
+		Canary:      0,
+	}
+
+	err := rule.Validate()
+	if err != nil {
+		t.Errorf("expected no error for canary=0, got %v", err)
+	}
+}
+
+func TestRuleValidate_CanaryBoundary_Hundred(t *testing.T) {
+	rule := Rule{
+		Name:        "canary-rule",
+		MarkerValue: "canary",
+		Type:        RuleTypeCanary,
+		Canary:      100,
+	}
+
+	err := rule.Validate()
+	if err != nil {
+		t.Errorf("expected no error for canary=100, got %v", err)
 	}
 }
 
