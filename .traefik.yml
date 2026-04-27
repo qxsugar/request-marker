@@ -1,35 +1,58 @@
-displayName: request mark
+displayName: request marker
 type: middleware
-import: github.com/qxsugar/request-mark
-summary: mark requests according to the rules
+import: github.com/qxsugar/request-marker
+summary: mark requests according to configurable rules
 
 testData:
-  request-mark:
+  request-marker:
+    tag: api
     logLevel: DEBUG
+    markerKey: X-MARK
+    versionHeader: X-Version
+    identifyHeader: X-User-ID
+    identifyCookie: user_id
+    identifyQuery: uid
 
-    serviceName: api
-    redisEnable: false
-    redisAddr: redis-server
-    redisPassword: ""
-    redisRulesKey: "redis_rules_key"
-    redisRuleMaxLen: 256
-    redisLoadInterval: 15
-    markKey: X-DISPATCH
-    headerVersion: X-version
-    headerIdentify: identify
-    cookieIdentify: identify-cookie
-    queryIdentify: identify-query
-    rules:
-      - serviceName: api
-        name: name
+    redisConfig:
+      enable: false
+      addr: localhost:6379
+      password: ""
+      db: 0
+      ruleListKeys: marker:api:rules
+      refreshInterval: 15
+
+    staticRules:
+      - tag: api
+        name: beta-users
         enable: true
         priority: 100
-        type: path
-        markValue: alpha
-        maxVersion: 3.3.3
-        minVersion: 2.2.2
+        type: identify
+        markValue: beta
         userIds:
-          - A001
-          - A002
-        weight: 80
-        path: alpha
+          - user001
+          - user002
+
+      - tag: api
+        name: version-range
+        enable: true
+        priority: 90
+        type: version
+        markValue: v2
+        minVersion: 2.0.0
+        maxVersion: 2.9.9
+
+      - tag: api
+        name: canary-30
+        enable: true
+        priority: 80
+        type: canary
+        markValue: canary
+        canary: 30
+
+      - tag: api
+        name: admin-path
+        enable: true
+        priority: 70
+        type: path
+        markValue: admin
+        path: /admin

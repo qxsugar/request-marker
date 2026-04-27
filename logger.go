@@ -1,10 +1,11 @@
-package request_mark
+package request_marker
 
 import (
 	"log"
 	"os"
 )
 
+// LogLevel represents the logging level
 type LogLevel int
 
 const (
@@ -13,35 +14,39 @@ const (
 	LogLevelError = LogLevel(1)
 )
 
-// Logger
-// traefik disables unsafe and syscall, which makes many logger libraries unusable
-// Ref https://github.com/tomMoulard/fail2ban/blob/main/fail2ban.go#L35-L38 a simple logger is implemented
+// Logger provides structured logging for the request marker plugin.
+// Note: Traefik disables unsafe and syscall, which makes many logger libraries unusable.
+// This simple logger implementation avoids those restrictions.
+// Reference: https://github.com/tomMoulard/fail2ban/blob/main/fail2ban.go#L35-L38
 type Logger struct {
-	logLevel    LogLevel
-	loggerInfo  *log.Logger
-	loggerDebug *log.Logger
-	loggerError *log.Logger
+	level       LogLevel
+	infoLogger  *log.Logger
+	debugLogger *log.Logger
+	errorLogger *log.Logger
 }
 
+// Debug logs a debug-level message
 func (l *Logger) Debug(args ...interface{}) {
-	if l.logLevel >= LogLevelDebug {
-		l.loggerDebug.Println(args...)
+	if l.level >= LogLevelDebug {
+		l.debugLogger.Println(args...)
 	}
 }
 
+// Info logs an info-level message
 func (l *Logger) Info(args ...interface{}) {
-	if l.logLevel >= LogLevelInfo {
-		l.loggerInfo.Println(args...)
+	if l.level >= LogLevelInfo {
+		l.infoLogger.Println(args...)
 	}
 }
 
+// Error logs an error-level message
 func (l *Logger) Error(args ...interface{}) {
-	if l.logLevel >= LogLevelError {
-		l.loggerError.Println(args...)
+	if l.level >= LogLevelError {
+		l.errorLogger.Println(args...)
 	}
 }
 
-func getLogLevel(level string) LogLevel {
+func parseLogLevel(level string) LogLevel {
 	switch level {
 	case "DEBUG":
 		return LogLevelDebug
@@ -54,11 +59,12 @@ func getLogLevel(level string) LogLevel {
 	}
 }
 
+// NewLogger creates a new logger with the specified level
 func NewLogger(level string) *Logger {
 	return &Logger{
-		logLevel:    getLogLevel(level),
-		loggerInfo:  log.New(os.Stdout, "INFO: [REQUEST_MARK] ", log.Ldate|log.Ltime|log.Lshortfile),
-		loggerDebug: log.New(os.Stdout, "DEBUG: [REQUEST_MARK] ", log.Ldate|log.Ltime|log.Lshortfile),
-		loggerError: log.New(os.Stdout, "ERROR: [REQUEST_MARK] ", log.Ldate|log.Ltime|log.Lshortfile),
+		level:       parseLogLevel(level),
+		infoLogger:  log.New(os.Stdout, "INFO: [REQUEST_MARK] ", log.Ldate|log.Ltime|log.Lshortfile),
+		debugLogger: log.New(os.Stdout, "DEBUG: [REQUEST_MARK] ", log.Ldate|log.Ltime|log.Lshortfile),
+		errorLogger: log.New(os.Stdout, "ERROR: [REQUEST_MARK] ", log.Ldate|log.Ltime|log.Lshortfile),
 	}
 }

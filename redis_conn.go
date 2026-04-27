@@ -1,22 +1,31 @@
-package request_mark
+package request_marker
 
-import "github.com/qxsugar/request-mark/redis"
+import (
+	"fmt"
+	"github.com/qxsugar/request-marker/redis"
+)
 
-func NewRedisOrDie(addr string, password string) redis.Conn {
+func NewRedis(addr, password string, db int) (redis.Conn, error) {
 	logger := NewLogger("INFO")
 	conn, err := redis.Dial("tcp", addr)
 	if err != nil {
-		logger.Error("redis_conn dial failed", "error", err)
-		panic(err)
+		logger.Error("Failed to connect to Redis", "address", addr, "error", err)
+		return nil, fmt.Errorf("connection failed: %v", err)
 	}
 
 	if password != "" {
-		_, err := redis.String(conn.Do("AUTH", password))
-		if err != nil && err.Error() != "OK" {
-			logger.Error("redis_conn auth failed", "error", err)
-			panic(err)
+		if _, err := conn.Do("AUTH", password); err != nil {
+			logger.Error("Failed to authenticate with Redis", "error", err)
+			return nil, fmt.Errorf("authentication failed: %v", err)
 		}
 	}
 
-	return conn
+	if db != 0 {
+		if _, err := conn.Do("SELECT", db); err != nil {
+			logger.Error("Failed to select Redis database", "db", db, "error", err)
+			return nil, fmt.Errorf("selecting database failed: %v", err)
+		}
+	}
+
+	return conn, nil
 }

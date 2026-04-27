@@ -1,0 +1,60 @@
+tag: api
+logLevel: DEBUG
+markerKey: X-MARK
+versionHeader: X-Version
+identifyHeader: X-User-ID
+identifyCookie: user_id
+identifyQuery: uid
+
+redisConfig:
+  enable: true
+  addr: localhost:6379
+  password: ""
+  db: 0
+  ruleListKeys: marker:api:rules
+  refreshInterval: 15
+
+staticRules:
+  - tag: api
+    name: beta-users
+    enable: true
+    priority: 100
+    type: identify
+    markValue: beta
+    userIds:
+      - user001
+      - user002
+      - user003
+
+  - tag: api
+    name: version-v2
+    enable: true
+    priority: 90
+    type: version
+    markValue: v2-stable
+    minVersion: 2.0.0
+    maxVersion: 2.9.9
+
+  - tag: api
+    name: canary-30
+    enable: true
+    priority: 80
+    type: canary
+    markValue: canary
+    canary: 30
+
+  - tag: api
+    name: admin-panel
+    enable: true
+    priority: 70
+    type: path
+    markValue: admin
+    path: /admin
+
+  - tag: api
+    name: api-v1
+    enable: true
+    priority: 60
+    type: path
+    markValue: v1
+    path: /api/v1
